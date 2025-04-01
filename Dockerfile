@@ -1,22 +1,27 @@
-FROM python:3.11-slim
+FROM langchain/langgraph-api:3.11
 
-WORKDIR /app
 
-# Install system packages if needed
-RUN apt-get update && apt-get install -y build-essential
 
-# Install Python deps
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# -- Installing local requirements --
+ADD requirements.txt /deps/__outer_workout_AssIstant/src/requirements.txt
+RUN PYTHONDONTWRITEBYTECODE=1 pip install --no-cache-dir -c /api/constraints.txt -r /deps/__outer_workout_AssIstant/src/requirements.txt
+# -- End of local requirements install --
 
-# Copy app code
-COPY . .
+# -- Adding non-package dependency workout_AssIstant --
+ADD . /deps/__outer_workout_AssIstant/src
+RUN set -ex && \
+    for line in '[project]' \
+                'name = "workout_AssIstant"' \
+                'version = "0.1"' \
+                '[tool.setuptools.package-data]' \
+                '"*" = ["**/*"]'; do \
+        echo "$line" >> /deps/__outer_workout_AssIstant/pyproject.toml; \
+    done
+# -- End of non-package dependency workout_AssIstant --
 
-# Set environment variables if needed
-ENV PORT=8000
+# -- Installing all local dependencies --
+RUN PYTHONDONTWRITEBYTECODE=1 pip install --no-cache-dir -c /api/constraints.txt -e /deps/*
+# -- End of local dependencies install --
+ENV LANGSERVE_GRAPHS='{"memory-agent": "/deps/__outer_workout_AssIstant/src/workout_AssIstant.py:graph"}'
 
-# Expose port
-EXPOSE 8000
-
-# Start LangGraph API
-CMD ["langgraph", "serve"]
+WORKDIR /deps/__outer_workout_AssIstant/src

@@ -10,3 +10,4 @@ tavily-python
 wikipedia
 trustcall
 langgraph-cli
+langgraph-api
